@@ -1,44 +1,90 @@
-# Transformers are Effective Diffusion Denoisers, Both in Context, and Without Context
+# From Softmax to Score — Figure Notebooks
 
-This repository powers the results and figures for the paper:
-**Transformers are Effective Diffusion Denoisers, Both in Context, and Without Context.**
-Anonymous Author(s)
+This repo contains self-contained Jupyter notebooks to reproduce the main figures from:
 
----
+> **From Softmax to Score: Transformers Can Effectively Implement In-Context Denoising Steps**
+> NeurIPS 2025
+> Paper: [https://neurips.cc/virtual/2025/loc/san-diego/poster/119941](https://neurips.cc/virtual/2025/loc/san-diego/poster/119941)
 
-## Overview
-
-Each notebook in this repo is focused on producing one figure from the paper. Notebooks are self-contained, with some repetitive code to allow for easy standalone execution and hyperparameter sweeps.
-
-* The code and structure are intentionally simple to support reproducibility and experimentation.
-* **DenoisingTesting.py** provides core routines and is imported by several notebooks.
-* Figures correspond to the notebook filenames; running a notebook should produce the associated plot from the paper.
-
-For experiment details, setup, and motivation for each figure, please refer directly to the paper.
+All details about the experiments and theory are in the paper; the notebooks here just implement the corresponding figure pipelines.
 
 ---
 
 ## Requirements
 
-* Python with PyTorch (see each notebook’s imports for details).
-* A GPU with **at least 20GB VRAM** is recommended.
 
-All dependencies are minimal and listed at the top of each notebook.
-No global requirements file is provided—see the first cell of each notebook for needed packages.
+The code is tuned for a **single NVIDIA A5000 (24 GB)**:
 
----
+* Expect up to **24 GB VRAM** for the heaviest runs.
+* **Inference / plotting**: usually **< 30 minutes** per notebook.
+* **Training**: several hours per notebook, but not days.
 
-## How to Use
-
-1. Choose the notebook corresponding to the figure you wish to reproduce.
-2. Adjust hyperparameters as wanted in the first cell(s).
-3. Run the notebook to generate the figure.
+You can reduce batch sizes, context sizes, or witness counts if you have less VRAM.
 
 ---
 
-## Notes
+## Data and checkpoints
 
-* The code is intentionally repetitive to keep each notebook runnable in isolation.
-* Figures are produced to match those in the paper by default.
-* For further information on the algorithms, theoretical context, and experiment design, consult the paper.
+All notebooks share the same layout:
 
+* `./data/`
+
+  * MNIST, CIFAR-10, CIFAR-100 (downloaded automatically via `torchvision`).
+* `./models/`
+
+  * Subfolders per figure (e.g. `models/figure2`, `models/figure3`, …).
+  * Each notebook saves checkpoints per seed and **reuses them** if present.
+  * You can enable a flag like `FORCE_RETRAIN = True` in each notebook to retrain from scratch.
+
+---
+
+## Notebooks
+
+### `Figure2.ipynb`
+
+* Manifold denoising on MNIST using an RBF Laplacian-style Transformer.
+* Reproduces **Figure 2**:
+
+  * Test error vs **context size**.
+  * Test error vs **number of layers**.
+
+### `Figure3+4.ipynb`
+
+* Score-based denoising using RBF vs “standard” (VPNorm) attention.
+* Datasets: **MNIST**, **CIFAR-10**, **CIFAR-100**.
+* Reproduces:
+
+  * **Figure 3**: per-layer test error for different kernels and “theory vs trained” models.
+  * **Figure 4**: visual denoising trajectories (train sample, test sample, pure noise).
+
+### `Figure5+6-3.ipynb`
+
+* In-context score denoising with **learnable witness tokens**.
+* Reproduces:
+
+  * **Figure 5**: test error vs **context length** (how much in-context information helps).
+  * **Figure 6 / appendix**: FID vs context length (if `torchmetrics` is available).
+
+### `Figure7+1-2.ipynb`
+
+* Witness-based denoisers with:
+
+  * **RBF (isotropic)** kernels.
+  * **Anisotropic** (diagonal Q/K/V) kernels.
+* Reproduces:
+
+  * **Figure 7**: test error vs **number of witnesses**, plus an exact-score baseline.
+  * **Figure 1**: visual “patch-wise” anisotropic denoising across layers.
+
+---
+
+## How to run
+
+1. Create a suitable Python environment with the packages above.
+2. Start Jupyter (or VS Code / Colab) on a GPU runtime.
+3. Open a notebook (e.g. `Figure3+4.ipynb`) and run all cells top-to-bottom.
+
+   * First run: trains models and saves them under `./models/…`.
+   * Later runs: reuse checkpoints and only rerun evaluation/plots.
+
+That’s it — the paper is the reference for what each figure means; the notebooks here just reproduce the experiments.
